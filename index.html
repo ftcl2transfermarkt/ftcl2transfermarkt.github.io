@@ -21,7 +21,7 @@
                 <span class="opacity-60 hidden sm:inline">Система управления трансферами и рейтингами</span>
             </div>
             <div class="text-slate-300 font-medium">
-                Сезон 2026 • Лига FTCL 2
+                6 Сезон • Лига FTCL 2
             </div>
         </div>
     </div>
@@ -109,7 +109,16 @@
                 </div>
             </div>
 
-            <div id="tab-values" class="tab-content hidden">
+            <div id="tab-values" class="tab-content hidden space-y-3">
+                <div class="bg-white p-3 rounded shadow-sm border border-slate-200 flex flex-wrap gap-1.5 items-center">
+                    <span class="text-[11px] font-bold uppercase text-slate-400 px-2">Позиция:</span>
+                    <button onclick="filterPlayersByPosition('ALL')" id="pos-filter-ALL" class="pos-filter-btn bg-[#7c3aed] text-white text-xs px-3 py-1 rounded font-semibold cursor-pointer transition">Все позиции</button>
+                    <button onclick="filterPlayersByPosition('Вратарь')" id="pos-filter-Вратарь" class="pos-filter-btn bg-slate-100 text-slate-600 hover:bg-slate-200 text-xs px-3 py-1 rounded font-semibold cursor-pointer transition">ВРТ</button>
+                    <button onclick="filterPlayersByPosition('Защитник')" id="pos-filter-Защитник" class="pos-filter-btn bg-slate-100 text-slate-600 hover:bg-slate-200 text-xs px-3 py-1 rounded font-semibold cursor-pointer transition">ЗАЩ</button>
+                    <button onclick="filterPlayersByPosition('Полузащитник')" id="pos-filter-Полузащитник" class="pos-filter-btn bg-slate-100 text-slate-600 hover:bg-slate-200 text-xs px-3 py-1 rounded font-semibold cursor-pointer transition">ПЗ</button>
+                    <button onclick="filterPlayersByPosition('Нападающий')" id="pos-filter-Нападающий" class="pos-filter-btn bg-slate-100 text-slate-600 hover:bg-slate-200 text-xs px-3 py-1 rounded font-semibold cursor-pointer transition">НАП</button>
+                </div>
+
                 <div class="bg-white rounded shadow-sm border border-slate-200 overflow-hidden">
                     <div class="bg-[#1e1642] text-white px-4 py-3 flex justify-between items-center">
                         <h3 class="font-bold text-xs uppercase tracking-wide">Таблица ценности игроков</h3>
@@ -355,12 +364,12 @@
             { id: "zaga_rfc", name: "РФК Зага", owner: "@fanziks", sideColor: "bg-violet-600", coach: { name: "Франческо Зага", license: "A" } }
         ];
 
-        // БАЗА ИГРОКОВ (Общий рейтинг силы используется только для личных карточек и ценностей)
+        // БАЗА ИГРОКОВ
         const FTCL_PLAYERS = [
             { id: 1, nick: "Зага", clubId: "zaga_rfc", clubName: "РФК Зага", position: "Нападающий", price: "5.00 млн ₽", rawPrice: 5000000, rating: 50 },
             { id: 2, nick: "Зенитчик", clubId: "zaga_rfc", clubName: "РФК Зага", position: "Защитник", price: "2.10 млн ₽", rawPrice: 2100000, rating: 55 },
             { id: 3, nick: "Тест Сайта", clubId: "zaga_rfc", clubName: "РФК Зага", position: "Вратарь", price: "4.00 млн ₽", rawPrice: 4000000, rating: 50 },
-            { id: 4, nick: "Игрок Пять", clubId: "zaga_rfc", clubName: "РФК Заga", position: "Полузащитник", price: "1.50 млн ₽", rawPrice: 1500000, rating: 48 },
+            { id: 4, nick: "Игрок Пять", clubId: "zaga_rfc", clubName: "РФК Зага", position: "Полузащитник", price: "1.50 млн ₽", rawPrice: 1500000, rating: 48 },
             { id: 5, nick: "Игрок Шесть", clubId: "zaga_rfc", clubName: "РФК Зага", position: "Защитник", price: "3.20 млн ₽", rawPrice: 3200000, rating: 60 },
             { id: 6, nick: "Игрок Семь", clubId: "zaga_rfc", clubName: "РФК Зага", position: "Нападающий", price: "6.00 млн ₽", rawPrice: 6000000, rating: 65 },
             { id: 7, nick: "Игрок Два", clubId: "zaga_rfc", clubName: "РФК Зага", position: "Вратарь", price: "1.10 млн ₽", rawPrice: 1100000, rating: 44 },
@@ -372,7 +381,7 @@
             { id: 13, nick: "Игрок Двенадцать", clubId: "zaga_rfc", clubName: "РФК Зага", position: "Полузащитник", price: "8.50 млн ₽", rawPrice: 8500000, rating: 74 }
         ];
 
-        // ЛЕНТА ОБНОВЛЕНИЙ: Без дат. Алгоритм держит строго до 3-х последних элементов.
+        // ЛЕНТА ОБНОВЛЕНИЙ
         const NEWS_DATA = [
             { 
                 title: "Обновление оценок Команды недели", 
@@ -390,6 +399,7 @@
 
         let currentPriceSortOrder = 'desc'; 
         let currentLetterFilter = 'ALL';
+        let currentPositionFilter = 'ALL'; // Хранит активный фильтр позиций
 
         function toggleTotwField() {
             const field = document.getElementById('totw-dropdown-field');
@@ -403,7 +413,6 @@
             }
         }
 
-        // Автоматический рендеринг ленты: берем только первые 3 (самые свежие) новости
         function renderNews() {
             const container = document.getElementById('news-container');
             if (!container) return;
@@ -416,12 +425,6 @@
                     <p class="text-slate-600 text-[11px] mt-1 leading-relaxed">${news.text}</p>
                 </div>
             `).join('');
-        }
-
-        // Функция симуляции добавления новой записи (для тестов): выталкивает 4-ю новость
-        function addNewRecord(title, text) {
-            NEWS_DATA.unshift({ title, text }); // Добавляем в начало
-            renderNews(); // Перерисовываем ленту (слайс автоматически оставит только 3)
         }
 
         // ДВИЖОК ПОИСКА
@@ -535,6 +538,27 @@
             renderValuesPage();
         }
 
+        // ФУНКЦИЯ ФИЛЬТРАЦИИ ПОЗИЦИЙ
+        function filterPlayersByPosition(position) {
+            currentPositionFilter = position;
+            
+            // Сбрасываем стили со всех кнопок позиций
+            document.querySelectorAll('.pos-filter-btn').forEach(btn => {
+                btn.classList.remove('bg-[#7c3aed]', 'text-white');
+                btn.classList.add('bg-slate-100', 'text-slate-600', 'hover:bg-slate-200');
+            });
+
+            // Подсвечиваем активную кнопку
+            const activeBtn = document.getElementById(`pos-filter-${position}`);
+            if (activeBtn) {
+                activeBtn.classList.remove('bg-slate-100', 'text-slate-600', 'hover:bg-slate-200');
+                activeBtn.classList.add('bg-[#7c3aed]', 'text-white');
+            }
+
+            // Перерисовываем таблицу с учетом нового фильтра
+            renderValuesPage();
+        }
+
         function switchTab(tabId) {
             if (tabId !== 'search') document.getElementById('nav-search').classList.add('hidden');
 
@@ -552,6 +576,7 @@
             }
 
             if (tabId === 'news') renderNews();
+            if (tabId === 'values') renderValuesPage();
         }
 
         function getRatingBadgeClass(rating) {
@@ -610,12 +635,26 @@
             }).join('');
         }
 
+        // СИНХРОННЫЙ МОДНЫЙ РЕНДЕР ТАБЛИЦЫ ЦЕННОСТЕЙ
         function renderValuesPage() {
             const tbody = document.getElementById('values-table-body');
-            const playersCopy = [...FTCL_PLAYERS];
-            playersCopy.sort((a, b) => (currentPriceSortOrder === 'desc') ? b.rawPrice - a.rawPrice : a.rawPrice - b.rawPrice);
+            if (!tbody) return;
 
-            tbody.innerHTML = playersCopy.map((p, idx) => `
+            // 1. Сначала фильтруем по выбранной позиции
+            let filteredPlayers = [...FTCL_PLAYERS];
+            if (currentPositionFilter !== 'ALL') {
+                filteredPlayers = filteredPlayers.filter(p => p.position === currentPositionFilter);
+            }
+
+            // 2. Затем сортируем по цене
+            filteredPlayers.sort((a, b) => (currentPriceSortOrder === 'desc') ? b.rawPrice - a.rawPrice : a.rawPrice - b.rawPrice);
+
+            if (filteredPlayers.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="py-8 text-center text-slate-400 text-xs bg-slate-50 font-medium">Игроков данной позиции не найдено.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = filteredPlayers.map((p, idx) => `
                 <tr onclick="openPlayerModal(${p.id})" class="hover:bg-slate-50 transition border-b border-slate-100 cursor-pointer">
                     <td class="py-2.5 px-4 text-center text-slate-400 font-bold">${idx + 1}</td>
                     <td class="py-2.5 px-2"><span class="font-bold text-violet-950">${p.nick}</span></td>
